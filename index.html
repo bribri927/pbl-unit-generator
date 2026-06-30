@@ -95,6 +95,18 @@
   .topic-pill.selected { border-color: var(--green); background: var(--green); color: var(--white); font-weight: 600; }
   .topics-loading { font-size: 13px; color: var(--ink-faint); font-style: italic; padding: 8px 0; }
 
+  .topic-divider { display: flex; align-items: center; gap: 12px; margin: 1.25rem 0; }
+  .topic-divider::before, .topic-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .topic-divider span { font-size: 12px; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .custom-topic-row { display: flex; gap: 10px; }
+  .custom-topic-row input { flex: 1; }
+  .custom-topic-btn { padding: 10px 18px; background: var(--green-light); color: var(--green-dark); border: 1.5px solid var(--green); border-radius: var(--radius-md); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .custom-topic-btn:hover { background: var(--green); color: var(--white); }
+  .custom-topic-confirm { display: none; align-items: center; gap: 10px; background: var(--green-light); border: 1.5px solid var(--green); border-radius: var(--radius-md); padding: 10px 14px; margin-top: 0.75rem; font-size: 13px; color: var(--green-dark); font-weight: 600; }
+  .custom-topic-confirm .clear-custom { cursor: pointer; color: var(--green-dark); opacity: 0.7; font-weight: 700; margin-left: auto; }
+  .custom-topic-confirm .clear-custom:hover { opacity: 1; }
+
   .options-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
   @media (max-width: 600px) { .options-row { grid-template-columns: 1fr; } }
 
@@ -341,6 +353,20 @@
       </div>
       <div class="topic-grid" id="topic-grid">
         <div class="topics-loading">Loading project topics...</div>
+      </div>
+
+      <div class="topic-divider"><span>or</span></div>
+
+      <div class="form-group">
+        <label for="custom-topic-input">Enter your own project topic</label>
+        <div class="custom-topic-row">
+          <input type="text" id="custom-topic-input" placeholder="e.g. Local watershed health and water conservation" maxlength="160">
+          <button class="custom-topic-btn" onclick="useCustomTopic()">Use this topic</button>
+        </div>
+      </div>
+      <div class="custom-topic-confirm" id="custom-topic-confirm">
+        <span>✓ Using your topic: <strong id="custom-topic-confirm-text"></strong></span>
+        <span class="clear-custom" onclick="clearCustomTopic()">✕ Clear</span>
       </div>
     </div>
 
@@ -689,6 +715,7 @@ async function loadTopics() {
   const sub = document.getElementById('topic-card-sub');
   if (sub) sub.textContent = 'Topics from ' + standards + ' ideal for sustained inquiry';
   selectedTopic = '';
+  clearCustomTopic(true);
   try {
     const res = await fetch('/api/claude-proxy', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -715,12 +742,35 @@ function selectTopic(topic, pillEl) {
   selectedTopic = topic;
   document.querySelectorAll('.topic-pill').forEach(p => p.classList.remove('selected'));
   pillEl.classList.add('selected');
+  clearCustomTopic(true);
   document.getElementById('options-card').style.display = 'block';
   document.getElementById('options-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function useCustomTopic() {
+  const input = document.getElementById('custom-topic-input');
+  const topic = input.value.trim();
+  if (!topic) { input.focus(); return; }
+  selectedTopic = topic;
+  document.querySelectorAll('.topic-pill').forEach(p => p.classList.remove('selected'));
+  const confirmBox = document.getElementById('custom-topic-confirm');
+  document.getElementById('custom-topic-confirm-text').textContent = topic;
+  confirmBox.style.display = 'flex';
+  document.getElementById('options-card').style.display = 'block';
+  document.getElementById('options-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearCustomTopic(silent) {
+  document.getElementById('custom-topic-input').value = '';
+  document.getElementById('custom-topic-confirm').style.display = 'none';
+  if (!silent) {
+    selectedTopic = '';
+    document.getElementById('options-card').style.display = 'none';
+  }
+}
+
 async function generateUnit() {
-  if (!selectedTopic) { alert('Please select a topic first.'); return; }
+  if (!selectedTopic) { alert('Please select or enter a topic first.'); return; }
   const grouping = document.getElementById('grouping-select').value;
   const product = document.getElementById('product-select').value;
   const duration = document.getElementById('duration-select').value;
@@ -1059,6 +1109,7 @@ function resetForm() {
   document.getElementById('grade-select').value = '';
   document.getElementById('subject-select').value = '';
   document.getElementById('standards-select').innerHTML = '<option value="">Select standards framework...</option>';
+  clearCustomTopic(true);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
